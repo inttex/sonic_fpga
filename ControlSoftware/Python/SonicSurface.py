@@ -10,8 +10,7 @@ class SonicSurface:
     
     def __init__(self):
         self.serialConn = None
-        self.emittersPos = np.array( self.EMITTERS_POS ).reshape(self.N_EMMITERS, 3)
-        
+        self.emittersPos = np.array( self.EMITTERS_POS ).reshape(-1, 3)
         self.ibpEmitters = np.ones( [1,self.N_EMMITERS], dtype=np.complex128 )
         
     @staticmethod
@@ -88,17 +87,28 @@ class SonicSurface:
             offsets -= (offsets%np.pi)
         self.sendPhases( phases + offsets)
         
+    #you can add a fourth component to each point to indicate its relative amplitude from 0 to 1
     def multiFocusIBP(self, points, iters=20, resetPhases=True):
+        pointsComponents = points.shape[1]
+        nPoints = points.shape[0]
+        assert(pointsComponents == 4 or pointsComponents == 3)
+        amps = np.ones(nPoints)
+        if pointsComponents == 4:
+            amps = points[:,3]
+            points = points[:,0:3]
+            
         propagators = SonicSurface.calcPropagatorsPistonsToPoints(
                 self.emittersPos, 
                 np.tile(np.array([0,1,0]), [self.N_EMMITERS,1]), 
-                points, self.WAVELENGTH*np.pi*2, 0.009)
+                points, np.pi*2/self.WAVELENGTH, 0.009)
+        
         backprops = np.conjugate( propagators ).transpose()
         if resetPhases:
             self.ibpEmitters = np.ones( [1,self.N_EMMITERS], dtype=np.complex128 )
         for _ in range(iters):
             fieldAtPoints = self.ibpEmitters @ propagators #propagate emitters -> points
             fieldAtPoints /= np.abs( fieldAtPoints ) #normalize points
+            fieldAtPoints *= amps #apply relative amps
             self.ibpEmitters = fieldAtPoints @ backprops #backprop points <- emitters
             self.ibpEmitters /= np.abs( self.ibpEmitters ) #normalize emitters
         phases = np.angle(self.ibpEmitters).squeeze()
@@ -116,9 +126,9 @@ class SonicSurface:
         self.sendPhases( phases )
         
     @staticmethod
-    def propPistonToPoints(ePos, eNormal, eApperture, pPositons, k):
+    def propPistonToPoints(ePos, eNormal, pPositons, k, eApperture):
         diff = pPositons - ePos
-        nd = np.sqrt(diff[:, 0]*diff[:, 0] + diff[:, 1]*diff[:, 1] + diff[:, 2]*diff[:, 2]) 
+        nd = np.sqrt(diff[:, 0]*diff[:, 0] + diff[:, 1]*diff[:, 1] + diff[:, 2]*diff[:, 2])
         nn = np.sqrt(eNormal[0]*eNormal[0] + eNormal[1]*eNormal[1] + eNormal[2]*eNormal[2])
         angle = np.arccos((diff[:, 0]*eNormal[0] + diff[:, 1]*eNormal[1] + diff[:, 2]*eNormal[2])  /  nd / nn)
         dum = 0.5 * eApperture * k * np.sin(angle)
@@ -135,5 +145,5 @@ class SonicSurface:
         assert(shapeA[0] == shapeN[0])
         props = np.zeros((shapeA[0], shapeB[0]), dtype = complex)
         for i in range(shapeA[0]):
-            props[i,:] = SonicSurface.propPistonToPoints(ePositions[i,:],eNormals[i,:], apperture, pPositions,k)
+            props[i,:] = SonicSurface.propPistonToPoints(ePositions[i,:],eNormals[i,:], pPositions, k, apperture)
         return props
