@@ -17,8 +17,8 @@ end PhaseLine;
 
 architecture Behavioral of PhaseLine is
 	 signal s_counter : integer range 0 to 7 := 0;
-	 signal s_phaseCurrent : integer range 0 to 16 := 16;
-	 signal s_phasePrev : integer range 0 to 16 := 0;
+	 signal s_phaseCurrent : integer range 0 to 31 := 16;  -- Fixed: was 0 to 16, but phase(5:1) can be 0-31
+	 signal s_phasePrev : integer range 0 to 31 := 0;      -- Fixed: was 0 to 16, but phase(5:1) can be 0-31
 	 signal s_prevSet : std_logic := '0';
 	 signal s_prevSwap : std_logic := '0';
 begin
