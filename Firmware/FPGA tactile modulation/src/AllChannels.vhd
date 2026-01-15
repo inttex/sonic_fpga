@@ -92,9 +92,14 @@ muxes : for i in 0 to (NBLOCKS/8-1) generate
 
 end generate muxes;
 
-AllChannels: process (chgClock) begin 
+-- Toggle ALL emitters synchronously for amplitude modulation
+-- This creates a pulsating focal point at the modulation frequency
+AllChannels: process (chgClock) begin
         if (rising_edge(chgClock)) then
-				s_enabled( to_integer(unsigned(pulse_length)) ) <= NOT s_enabled( to_integer(unsigned(pulse_length)) );
+				-- Toggle all emitters together (not individually)
+				for i in 0 to (NBLOCKS-1) loop
+					s_enabled(i) <= NOT s_enabled(i);
+				end loop;
 		  end if;
  end process;
  
