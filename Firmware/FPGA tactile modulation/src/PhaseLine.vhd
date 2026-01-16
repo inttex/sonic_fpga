@@ -16,35 +16,43 @@ entity PhaseLine is
 end PhaseLine;
 
 architecture Behavioral of PhaseLine is
-	 signal s_counter : integer range 0 to 7 := 0;
+	 signal s_counter : integer range 0 to 8 := 0;
 	 signal s_phaseCurrent : integer range 0 to 16 := 16;
 	 signal s_phasePrev : integer range 0 to 16 := 0;
 	 signal s_prevSet : std_logic := '0';
 	 signal s_prevSwap : std_logic := '0';
+	 signal s_prevCounter : std_logic_vector(3 downto 0) := "0000";
 begin
-    PhaseLine: process (clk) begin 
+    PhaseLine: process (clk) begin
         if (rising_edge(clk)) then
 					s_prevSet <= set;
 					s_prevSwap <= swap;
-					
+
 					if (set = '1' AND s_prevSet = '0') then
 						s_phasePrev <= to_integer(unsigned(phase));
 					end if;
-					
+
 					if (swap = '1' AND s_prevSwap = '0') then
 						s_phaseCurrent <= s_phasePrev;
 						s_phasePrev <= s_phaseCurrent;
 					end if;
-				  
-				  if (s_phaseCurrent = to_integer(unsigned(counter)) ) then 
-						s_counter <= 7;
-				  end if;
-				  
-				  if (s_counter = 0) then
-						pulse <= '0';
-				  else
-						s_counter <= s_counter - 1;
-						pulse <= '1' and enabled;
+
+				  -- Detect phase division boundary (when counter changes)
+				  if (counter /= s_prevCounter) then
+						s_prevCounter <= counter;
+
+						-- Check if we should start a new pulse
+						if (s_phaseCurrent = to_integer(unsigned(counter)) ) then
+							s_counter <= 8;  -- 8 phase divisions = 50% duty cycle
+						end if;
+
+						-- Decrement counter and update pulse (once per phase division)
+						if (s_counter = 0) then
+							pulse <= '0';
+						else
+							s_counter <= s_counter - 1;
+							pulse <= '1' and enabled;
+						end if;
 				  end if;
 		  end if;
  end process;
