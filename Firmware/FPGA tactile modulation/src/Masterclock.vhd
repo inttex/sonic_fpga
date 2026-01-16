@@ -135,7 +135,7 @@ BEGIN
 		bandwidth_type => "AUTO",
 		clk0_divide_by => 625,
 		clk0_duty_cycle => 50,
-		clk0_multiply_by => 64,
+		clk0_multiply_by => 128,  -- Changed from 64 to 128 to match primary firmware (10.24 MHz)
 		clk0_phase_shift => "0",
 		compensate_clock => "CLK0",
 		inclk0_input_frequency => 20000,

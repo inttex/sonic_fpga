@@ -4,14 +4,14 @@ use IEEE.numeric_std.all;
 
 entity AllChannels is
    generic(NBLOCKS: integer := 256);
-	
+
 	port (
 		clk8 : in  STD_LOGIC;
 		clk : in  STD_LOGIC;
 		chgClock : in  STD_LOGIC;
-		counter : in std_logic_vector(6 downto 0);
+		counter : in std_logic_vector(7 downto 0);  -- Changed from 6 downto 0 to 7 downto 0 for 40 kHz
 		pulse_length : in STD_LOGIC_VECTOR (7 downto 0); -- 0 to 7
-		
+
 		swap : in  STD_LOGIC := '0';
 		phase : in std_logic_vector(7 downto 0);
 		set : in  STD_LOGIC := '0';
@@ -21,7 +21,7 @@ entity AllChannels is
 		data_out : out std_logic_vector(31 downto 0)
 		--data_demux : out std_logic_vector(NBLOCKS-1 downto 0)
 	);
-	
+
 end AllChannels;
 
 architecture Behavioral of AllChannels is
@@ -66,13 +66,13 @@ begin
 
 insts : for i in 0 to (NBLOCKS-1) generate
 	begin
-		PhaseLine_inst : PhaseLine PORT MAP 
+		PhaseLine_inst : PhaseLine PORT MAP
 		(
 			clk => clk,
 		   set => s_set(i),
 			swap => swap,
-			phase => phase(5 downto 1),
-			counter => counter(6 downto 3),
+			phase => phase(5 downto 0),  -- Changed from 5 downto 1 to 5 downto 0 for 32 phase steps
+			counter => counter(7 downto 3),  -- Changed from 6 downto 3 to 7 downto 3 for 32 steps
 			enabled => s_enabled(i),
 		   pulse => s_pulseToMux(i)
 		);

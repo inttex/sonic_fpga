@@ -56,18 +56,16 @@ begin
 						s_set_out <= '1';
 						s_ByteCounter <= s_ByteCounter + 1;
 						
-						if (q_in = "00010000") then
-							-- Java sends 16 for OFF (getDivs() = 16)
-							-- Multiply by 2 to get 32, which after bits(5:1) becomes 16 (never matches counter 0-15)
-							s_data_out <= "00100000"; -- 32 represents "off" so no phase correction
+						if (q_in = "00100000") then
+							-- Java sends 32 for OFF (phase value 32)
+							-- This will never match counter 0-31, so emitter stays OFF
+							s_data_out <= q_in; -- 32 represents "off" so no phase correction
 						else
 							-- Java sends phase 0-15 (16 divisions)
-							-- We multiply by 2 to compensate for phase(5 downto 1) bit shift in AllChannels
-							-- We divide correction by 2 to match the new scale
-							-- Mask with 0b00111111 (6 bits) to keep values in range 0-63
-							-- After bits(5:1) in AllChannels, this gives 0-31, but counter is only 0-15
-							-- So values wrap around modulo 16 (which is what we want for phase correction)
-							s_data_out <= std_logic_vector( to_unsigned( ((to_integer(unsigned(q_in)) * 2) + (PHASE_CORRECTION(s_ByteCounter) / 2)) mod 32, 8 ) );
+							-- Add phase correction and mask to 6 bits (0-63)
+							-- AllChannels takes bits(5:0) directly now (no bit shift)
+							-- Values 0-31 will match counter (emitter ON), 32-63 will not match (emitter OFF)
+							s_data_out <= std_logic_vector( to_unsigned( to_integer(unsigned(q_in)) + PHASE_CORRECTION(s_ByteCounter), 8 ) ) and "00111111";
 						end if;
 						
 					end if;
