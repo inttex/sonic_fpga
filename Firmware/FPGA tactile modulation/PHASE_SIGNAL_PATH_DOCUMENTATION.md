@@ -186,6 +186,14 @@ Value: 0   0   0   0   0   0   0   0   1   1   1   1   1   1   1   1   2
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-1.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 ### Diagram 2: Phase-Shifted Pulse Generation
 
 **ASCII Version** (for local viewing):
@@ -239,6 +247,14 @@ Physical Result:
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-2.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 ### Diagram 3: Detailed PhaseLine Operation
 
@@ -296,6 +312,14 @@ Pulse:         1   1   1   1   1   1   1   0   0   0   0   0
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-3.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 ### Diagram 4: Amplitude Modulation for Tactile Feedback
 
@@ -356,6 +380,14 @@ User feels:    ████████░░░░░░░░█████�
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-4.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 **WaveDrom Version - Long Timescale** (100 Hz modulation):
 ```wavedrom
 {
@@ -374,6 +406,14 @@ User feels:    ████████░░░░░░░░█████�
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-5.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 ### Diagram 5: Complete Signal Path Example
 
@@ -444,6 +484,14 @@ Final Output (at emitter):
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-6.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 ---
 

@@ -36,6 +36,14 @@ Shows how the 7-bit counter creates the 40 kHz carrier frequency with 16 phase d
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-1.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 **Key Points**:
 - Master clock: 5.12 MHz (195.3 ns period)
 - Full counter cycle: 128 clocks = 25 µs (40 kHz)
@@ -71,6 +79,14 @@ Demonstrates how different phase values create time-shifted pulses for multiple 
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-2.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 **Key Points**:
 - Each phase value shifts the pulse by 1.5625 µs (22.5°)
 - Phase 0 = 0°, Phase 5 = 112.5°, Phase 10 = 225°
@@ -105,6 +121,14 @@ Shows the internal operation of the PhaseLine module with phase comparison and p
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-3.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 **Key Points**:
 - When counter matches phase, s_counter is set to 7
 - s_counter decrements every master clock cycle
@@ -136,6 +160,14 @@ Shows the internal operation of the PhaseLine module with phase comparison and p
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-4.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 ### 4b. 100 Hz Tactile Modulation
 
 ```wavedrom
@@ -155,6 +187,14 @@ Shows the internal operation of the PhaseLine module with phase comparison and p
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-5.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 **Key Points**:
 - chgClock toggles emitters at configurable rate
@@ -190,6 +230,14 @@ Shows two emitters with different phases creating a focal point.
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-6.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 **Key Points**:
 - Java sends phase values via UART
 - FPGA applies calibration and generates phase-shifted pulses
@@ -223,6 +271,14 @@ Shows the original 5.47% duty cycle issue.
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-7.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 **Problem**:
 - Pulse width: 7 master clock cycles = 1.367 µs
@@ -260,6 +316,14 @@ Demonstrates the 50% duty cycle fix.
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-8.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 ### Fixed Implementation (50% Achieved!)
 
 ```wavedrom
@@ -281,6 +345,14 @@ Demonstrates the 50% duty cycle fix.
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-9.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 ### Before/After Comparison
 
@@ -307,6 +379,14 @@ Demonstrates the 50% duty cycle fix.
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-10.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 **Fix Summary**:
 - **Before**: s_counter decrements every master clock (195.3 ns)
