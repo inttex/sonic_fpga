@@ -44,12 +44,37 @@ Let's say phase = 5:
 
 ### Timeline Analysis
 
+**ASCII Version** (for local viewing):
 ```
 Full Counter:  40    41    42    43    44    45    46    47    48    49
 counter(6:3):  5     5     5     5     5     5     5     5     6     6
 Match?:        YES   NO    NO    NO    NO    NO    NO    NO    NO    NO
 s_counter:     7     6     5     4     3     2     1     0     0     0
 Pulse:         1     1     1     1     1     1     1     0     0     0
+```
+
+**WaveDrom Version** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'clk (5.12MHz)', wave: 'p.........', period: 0.5},
+    {},
+    {name: 'counter[6:0]', wave: 'x222222222', data: ['40','41','42','43','44','45','46','47','48','49'], period: 0.5},
+    {name: 'counter[6:3]', wave: 'x2.......3', data: ['5','6'], period: 4},
+    {},
+    {name: 'match (phase=5)', wave: '010.......', period: 0.5, node: '.a'},
+    {},
+    {name: 's_counter', wave: 'x23456789x', data: ['7','6','5','4','3','2','1','0','0'], period: 0.5},
+    {},
+    {name: 'pulse output', wave: '01......0.', period: 0.5, node: '.b......c'}
+  ],
+  edge: ['a-~>b Trigger', 'b~>c 7 clocks = 1.367µs'],
+  config: { hscale: 2 },
+  head: {
+    text: 'Timeline Analysis: 7-Clock Pulse (5.47% duty cycle)',
+    tick: 0
+  }
+}
 ```
 
 **Wait!** The match only happens ONCE per phase division (when counter first enters that range).
@@ -318,6 +343,29 @@ Total = 128 clock cycles ✓
 - Half period = 8 divisions = 64 clock cycles ✓
 
 **So for 50% duty cycle, the pulse should be HIGH for 8 phase divisions (0-7) and LOW for 8 phase divisions (8-15).**
+
+**WaveDrom Comparison** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
+    {},
+    ['Current Implementation (5.47% duty cycle)',
+      {name: 'Pulse (7 clocks)', wave: '01......0.........', period: 1, node: '.a......b'}
+    ],
+    {},
+    ['Desired Implementation (50% duty cycle)',
+      {name: 'Pulse (64 clocks)', wave: '01.......0........', period: 1, node: '.c.......d'}
+    ]
+  ],
+  edge: ['a~>b 1.367µs (5.47%)', 'c~>d 12.5µs (50%)'],
+  config: { hscale: 3 },
+  head: {
+    text: 'Comparison: Current vs Desired Duty Cycle',
+    tick: 0
+  }
+}
+```
 
 ### But That's Not What the Code Does!
 
