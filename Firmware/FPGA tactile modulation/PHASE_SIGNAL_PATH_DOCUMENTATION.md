@@ -150,6 +150,8 @@ counter input:  [6][5][4][3][2][1][0]
                    └───┬───┘
 
 ```
+**ASCII Version** (for local viewing):
+```
 Master Clock (5.12 MHz):
     ___   ___   ___   ___   ___   ___   ___   ___
 ___|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |___
@@ -166,8 +168,27 @@ Value: 0   0   0   0   0   0   0   0   1   1   1   1   1   1   1   1   2
        └──────────── 1.5625 µs per division ────────────┘
 ```
 
+**WaveDrom Version** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'clk (5.12MHz)', wave: 'p...............', period: 0.5},
+    {},
+    {name: 'counter[6:0]', wave: 'x2222222222222x', data: ['0','1','2','3','4','5','6','7','8','...','125','126','127','0'], period: 0.5},
+    {},
+    {name: 'counter[6:3]', wave: 'x2.......3.....4', data: ['0','1','2'], period: 4}
+  ],
+  config: { hscale: 2 },
+  head: {
+    text: 'Diagram 1: Counter and 40kHz Generation (25µs period, 1.5625µs per phase division)',
+    tick: 0
+  }
+}
+```
+
 ### Diagram 2: Phase-Shifted Pulse Generation
 
+**ASCII Version** (for local viewing):
 ```
 Example: 3 emitters with different phases
 
@@ -194,8 +215,34 @@ Physical Result:
   → Creates constructive/destructive interference → Focal point!
 ```
 
+**WaveDrom Version** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
+    {},
+    {name: 'Emitter #0 (phase=0)', wave: '01..............0.', period: 1, node: '.a..............b'},
+    {name: 'Emitter #1 (phase=5)', wave: '0.....1.........0.', period: 1, node: '.....c.........d'},
+    {name: 'Emitter #2 (phase=10)', wave: '0..........1....0.', period: 1, node: '..........e....f'},
+    {},
+    ['Phase Angles',
+      {name: '0° (phase=0)', wave: 'x', phase: 0},
+      {name: '112.5° (phase=5)', wave: 'x', phase: 112.5},
+      {name: '225° (phase=10)', wave: 'x', phase: 225}
+    ]
+  ],
+  edge: ['a~>b 10.9µs (7 cycles)', 'c~>d 10.9µs', 'e~>f 10.9µs'],
+  config: { hscale: 3 },
+  head: {
+    text: 'Diagram 2: Phase-Shifted Pulses Create Focal Point (25µs period = 40kHz)',
+    tick: 0
+  }
+}
+```
+
 ### Diagram 3: Detailed PhaseLine Operation
 
+**ASCII Version** (for local viewing):
 ```
 Example: Emitter with phase = 3
 
@@ -226,8 +273,33 @@ Pulse:         1   1   1   1   1   1   1   0   0   0   0   0
                └────── 7 cycles ──────┘
 ```
 
+**WaveDrom Version** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'clk (5.12MHz)', wave: 'p...............', period: 0.5},
+    {},
+    {name: 'counter[6:3]', wave: 'x2.......3......4', data: ['2','3','4'], period: 4},
+    {},
+    {name: 's_phaseCurrent', wave: '3...............', data: ['3'], period: 0.5},
+    {name: 'match (phase=counter)', wave: '0.......10......', period: 0.5, node: '........a'},
+    {},
+    {name: 's_counter', wave: 'x2.......3456789', data: ['0','7','6','5','4','3','2','1','0'], period: 0.5},
+    {},
+    {name: 'pulse output', wave: '0........1......0', period: 0.5, node: '.........b......c'}
+  ],
+  edge: ['a-~>b Trigger', 'b~>c 7 clocks (1.367µs)'],
+  config: { hscale: 2 },
+  head: {
+    text: 'Diagram 3: PhaseLine Pulse Generation (phase=3, 7-cycle pulse)',
+    tick: 0
+  }
+}
+```
+
 ### Diagram 4: Amplitude Modulation for Tactile Feedback
 
+**ASCII Version** (for local viewing):
 ```
 Example: Modulation with steps = 10, targeting 100 Hz tactile sensation
 
@@ -263,8 +335,49 @@ User feels:    ████████░░░░░░░░█████�
                Vibration at 100 Hz → Tactile sensation!
 ```
 
+**WaveDrom Version - Short Timescale** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'clk (5.12MHz)', wave: 'p..........', period: 0.5},
+    {},
+    {name: 'stepCounter', wave: 'x2222222222', data: ['0','1','2','3','4','5','6','7','8','9','10'], period: 0.5},
+    {},
+    {name: 'chgClock', wave: '0..........1', period: 0.5, node: '...........a'},
+    {},
+    {name: 's_enabled', wave: '1..........0', period: 0.5, node: '...........b'}
+  ],
+  edge: ['a-~>b Toggle emitter'],
+  config: { hscale: 2 },
+  head: {
+    text: 'Diagram 4a: Amplitude Modulation Clock Generation (steps=10, 1.953µs period)',
+    tick: 0
+  }
+}
+```
+
+**WaveDrom Version - Long Timescale** (100 Hz modulation):
+```wavedrom
+{
+  signal: [
+    {name: '40kHz carrier', wave: '10101010101010101010', period: 0.3},
+    {},
+    {name: 's_enabled', wave: '1.......0.......1.......0.......1', period: 2, node: '.a......b.......c......d'},
+    {},
+    {name: 'Output (carrier AND enabled)', wave: '1010101.........1010101.........1', period: 0.3}
+  ],
+  edge: ['a~>b 5ms', 'b~>c 5ms', 'c~>d 5ms'],
+  config: { hscale: 1 },
+  head: {
+    text: 'Diagram 4b: 100Hz Tactile Modulation (10ms period, ON/OFF switching)',
+    tick: 0
+  }
+}
+```
+
 ### Diagram 5: Complete Signal Path Example
 
+**ASCII Version** (for local viewing):
 ```
 Scenario: Create focal point with 2 emitters, 100 Hz tactile modulation
 
@@ -306,6 +419,30 @@ Final Output (at emitter):
   - Modulated at 100 Hz for tactile sensation
   - Constructive interference creates focal point in air
   - User feels 100 Hz vibration at focal point location!
+```
+
+**WaveDrom Version** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
+    {},
+    ['Two Emitters with Phase Shift',
+      {name: 'Emitter #0 (phase=5)', wave: '0.....1.........0.', period: 1, node: '.....a.........b'},
+      {name: 'Emitter #1 (phase=6)', wave: '0......1........0.', period: 1, node: '......c........d'}
+    ],
+    {},
+    ['Result: Constructive Interference',
+      {name: 'Combined Acoustic Pressure', wave: 'x.....23........x.', data: ['Peak','Peak'], period: 1}
+    ]
+  ],
+  edge: ['a-c 1 phase div (1.56µs)', 'b-d Phase offset creates focal point'],
+  config: { hscale: 3 },
+  head: {
+    text: 'Diagram 5: Complete Signal Path - Two Emitters Create Focal Point',
+    tick: 0
+  }
+}
 ```
 
 ---

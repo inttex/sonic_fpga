@@ -87,6 +87,31 @@ Period: 25 µs (40 kHz)
 Duty cycle: 12.5 µs / 25 µs = 50% ✓✓✓
 ```
 
+**WaveDrom Comparison** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
+    {},
+    ['BEFORE: 5.47% Duty Cycle ❌',
+      {name: 's_counter (master clocks)', wave: 'x....0123456789x..', data: ['7','6','5','4','3','2','1','0'], period: 0.125},
+      {name: 'pulse (7 clocks)', wave: '0.....1......0....', period: 1, node: '.....a......b'}
+    ],
+    {},
+    ['AFTER: 50% Duty Cycle ✓',
+      {name: 's_counter (phase divs)', wave: 'x....0123456789x..', data: ['8','7','6','5','4','3','2','1','0'], period: 1},
+      {name: 'pulse (8 divisions)', wave: '0.....1.......0...', period: 1, node: '.....c.......d'}
+    ]
+  ],
+  edge: ['a~>b 1.367µs (5.47%)', 'c~>d 12.5µs (50%)'],
+  config: { hscale: 3 },
+  head: {
+    text: 'Before/After Comparison: 10× Acoustic Power Increase!',
+    tick: 0
+  }
+}
+```
+
 ## Timing Analysis
 
 ### Phase Division Timing
@@ -105,6 +130,7 @@ Duty cycle: 12.5 µs / 25 µs = 50% ✓✓✓
 
 ### Timeline Example (Phase = 5)
 
+**ASCII Version** (for local viewing):
 ```
 Counter(6:3):  0    1    2    3    4    5    5    5    5    5    5    5    5    6    7    8    9   10   11   12   13   14   15    0
 Time (µs):     0  1.56 3.13 4.69 6.25 7.81 9.38 10.9 12.5 14.1 15.6 17.2 18.8 20.3 21.9 23.4 25.0 26.6 28.1 29.7 31.3 32.8 34.4 35.9
@@ -116,6 +142,32 @@ Pulse:         0    0    0    0    0    0    1    1    1    1    1    1    1    
 **Pulse ON**: Divisions 5-12 (8 divisions) = 12.5 µs
 **Pulse OFF**: Divisions 13-4 (8 divisions) = 12.5 µs
 **Duty Cycle**: 50% ✓
+
+**WaveDrom Version** (renders on GitHub):
+```wavedrom
+{
+  signal: [
+    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
+    {},
+    {name: 'match (phase=5)', wave: '0....10...........', period: 1, node: '.....a'},
+    {},
+    {name: 's_counter (phase divs)', wave: 'x2...3456789x.....', data: ['0','8','7','6','5','4','3','2','1','0'], period: 1},
+    {},
+    {name: 'pulse output', wave: '0.....1.......0...', period: 1, node: '.....b.......c'},
+    {},
+    ['Timing Measurements',
+      {name: 'Pulse Width', wave: 'x', node: ''},
+      {name: 'Period', wave: 'x', node: ''}
+    ]
+  ],
+  edge: ['a-~>b Start pulse', 'b~>c 8 phase divs = 12.5µs (50% duty cycle!)'],
+  config: { hscale: 3 },
+  head: {
+    text: 'Fixed Implementation: 50% Duty Cycle Achieved!',
+    tick: 0
+  }
+}
+```
 
 ## Benefits
 
