@@ -95,6 +95,14 @@ Output:       █    ░    ░    ░    ░    ░    ░    ░    █    █
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/MUX8_ANALYSIS-diagram-1.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 Wait, this doesn't give 50% either...
 
 ## Let Me Reconsider
@@ -162,6 +170,14 @@ Here's why:
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/MUX8_ANALYSIS-diagram-2.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 But this still doesn't fully explain 50%...
 

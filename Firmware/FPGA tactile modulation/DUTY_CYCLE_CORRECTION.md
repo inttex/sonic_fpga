@@ -77,6 +77,14 @@ Pulse:         1     1     1     1     1     1     1     0     0     0
 }
 ```
 
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_CORRECTION-diagram-1.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
+
 **Wait!** The match only happens ONCE per phase division (when counter first enters that range).
 
 But actually, looking at the code more carefully:
@@ -366,6 +374,14 @@ Total = 128 clock cycles ✓
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_CORRECTION-diagram-2.svg)
+
+<sub>Click the image to open in WaveDrom Editor</sub>
+
+
 
 ### But That's Not What the Code Does!
 

@@ -1,0 +1,22 @@
+{
+  "name": "fpga-wavedrom-generator",
+  "version": "1.0.0",
+  "description": "Generate SVG images from WaveDrom diagrams in markdown files",
+  "main": "generate-wavedrom-images.js",
+  "scripts": {
+    "generate": "node generate-wavedrom-images.js",
+    "clean": "node -e \"const fs=require('fs'); const path=require('path'); const dir='wavedrom-images'; if(fs.existsSync(dir)){fs.rmSync(dir,{recursive:true}); console.log('Cleaned '+dir);}\""
+  },
+  "keywords": [
+    "wavedrom",
+    "svg",
+    "timing-diagrams",
+    "fpga"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "wavedrom": "^3.4.0"
+  }
+}
+
