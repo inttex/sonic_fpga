@@ -2,6 +2,10 @@
 
 This document explains the complete signal path from Java software to ultrasonic emitters, including phase delays, timing, and modulation.
 
+**Last Updated**: 2026-01-19
+**Branch**: phase_fix_16bit
+**Status**: ✅ Reviewed and corrected with actual VHDL code
+
 ---
 
 ## Table of Contents
@@ -10,7 +14,7 @@ This document explains the complete signal path from Java software to ultrasonic
 3. [Phase Data Flow](#phase-data-flow)
 4. [Temporal Signal Generation](#temporal-signal-generation)
 5. [Amplitude Modulation](#amplitude-modulation)
-6. [Timing Diagrams](#timing-diagrams)
+6. [Complete Signal Path Example](#complete-signal-path-example)
 
 ---
 
@@ -18,19 +22,19 @@ This document explains the complete signal path from Java software to ultrasonic
 
 ### Signal Path Summary
 ```
-Java Application
-    ↓ (UART/Serial)
-UARTReader (FPGA)
-    ↓
-Distribute Module
-    ↓ (Phase + Calibration)
-AllChannels Module
-    ↓
-PhaseLine (×256 instances)
-    ↓
-Mux8 (×32 instances)
-    ↓
-32 Output Pins → Ultrasonic Emitters (40 kHz)
+Java Application (SimpleFPGA_Tactile.java)
+    ↓ (UART @ 115200 baud)
+UARTReader.vhd (FPGA)
+    ↓ (8-bit bytes: q_in)
+Distribute.vhd
+    ↓ (Phase + PHASE_CORRECTION calibration)
+AllChannels.vhd
+    ↓ (Distributes to 256 PhaseLine instances)
+PhaseLine.vhd (×256 instances)
+    ↓ (Generates phase-shifted pulses)
+Mux8.vhd (×32 instances)
+    ↓ (8:1 time-division multiplexing)
+32 Output Pins → 256 Ultrasonic Emitters (40 kHz)
 ```
 
 ### Key Parameters
@@ -39,7 +43,8 @@ Mux8 (×32 instances)
 - **Phase Resolution**: 25 µs / 16 = **1.5625 µs per division**
 - **Number of Emitters**: 256
 - **Output Channels**: 32 (8:1 multiplexing)
-- **Modulation Frequency**: Configurable (typically 50-200 Hz for tactile feedback)
+- **Pulse Width**: 7 clock cycles = **1.367 µs** (5.47% duty cycle)
+- **Modulation Frequency**: Configurable via `steps` parameter (1-31)
 
 ---
 
@@ -54,7 +59,7 @@ PLL Configuration:
   - Output: 50 MHz × (64/625) = 5.12 MHz
 
 Main Clock (clk): 5.12 MHz
-  - Period: 195.3 ns
+  - Period: 195.3125 ns (1/5.12 MHz)
   - Used for: Counter, phase logic, all synchronous operations
 ```
 
@@ -68,10 +73,14 @@ signal sCounter : STD_LOGIC_VECTOR (6 downto 0);
 ```
 
 **Counter Timing**:
-- Increment rate: 5.12 MHz
-- Full cycle (0-127): 128 / 5.12 MHz = **25 µs** (40 kHz period) ✓
-- Counter bits used for phase: `counter(6:3)` = 4 bits (0-15)
-- Counter bits used for mux: `counter(2:0)` = 3 bits (0-7)
+- Increment rate: 5.12 MHz (every 195.3125 ns)
+- Full cycle (0-127): 128 × 195.3125 ns = **25 µs** (40 kHz period) ✓
+- Counter bits used for phase comparison: `counter(6:3)` = 4 bits (0-15)
+- Counter bits used for mux selection: `counter(2:0)` = 3 bits (0-7)
+
+**Phase Division Timing**:
+- Each phase division: 25 µs / 16 = **1.5625 µs**
+- Each phase division: 8 clock cycles (8 × 195.3125 ns = 1.5625 µs)
 
 ---
 
@@ -90,7 +99,7 @@ if (t.getpAmplitude() == 0) {
 
 // Send via UART
 phaseDataPlusHeader[0] = 254;    // Start command (0xFE)
-phaseDataPlusHeader[1..256] = phase values for each emitter
+phaseDataPlusHeader[1..256] = phase values for each emitter (0-15 or 16 for OFF)
 serial.write(phaseDataPlusHeader);
 ```
 
@@ -104,84 +113,106 @@ UART Settings:
 
 Receives byte stream:
   [254] [phase0] [phase1] [phase2] ... [phase255]
+
+Special commands:
+  254 (0xFE) - Start phases command
+  253 (0xFD) - Swap buffers command
+  160-191 (0b101XXXXX) - Set modulation steps (bits 4:0)
 ```
 
 ### Step 3: Distribute Module Applies Calibration (Distribute.vhd)
+
+**CRITICAL CORRECTION**: The actual code uses `to_unsigned(..., 4)` not `to_unsigned(..., 8)`!
+
 ```vhdl
--- Receive phase value from Java (0-15 for ON, 32 for OFF)
-if (q_in = "00100000") then  -- 32 = OFF
+-- Receive phase value from Java (0-15 for ON, 16 for OFF)
+if (q_in = "00010000") then  -- 16 = OFF
     s_data_out <= q_in;      -- Pass through unchanged
 else
-    -- Add phase calibration and mask to 5 bits (0-31)
-    s_data_out <= (q_in + PHASE_CORRECTION(emitter_index)) and "00011111";
+    -- Add phase calibration, convert to 4 bits (auto wrap at 16), mask to 4 bits
+    s_data_out <= std_logic_vector(
+        to_unsigned(
+            to_integer(unsigned(q_in)) + PHASE_CORRECTION(s_ByteCounter),
+            4  -- ← 4 bits! Not 8!
+        )
+    ) and "00001111";
 end if;
 ```
 
 **Phase Calibration Array** (divided by 2 for 16-division system):
 ```vhdl
-PHASE_CORRECTION : array(0 to 255) of integer range 0 to 16
-  = (11,5,6,5,13,14,13,13,5,6,6,13,14,5,6,6,...)
+type T_PHASE_CORRECTION is array (0 to 255) of integer range 0 to 16;
+constant PHASE_CORRECTION : T_PHASE_CORRECTION :=
+  (11,5,6,5,13,14,13,13,5,6,6,13,14,5,6,6,...)
 ```
 
 **Example Calculation**:
 ```
 Java sends:     phase = 8 (for emitter #0)
 Calibration:    PHASE_CORRECTION(0) = 11
-FPGA calculates: (8 + 11) and 0x1F = 19 and 31 = 19
-Final phase:    19 (5-bit value)
+Sum:            8 + 11 = 19
+to_unsigned(19, 4): Wraps at 16 → 19 mod 16 = 3
+Mask:           3 and 0x0F = 3
+Final phase:    3 (4-bit value, 0-15)
+
+This is CORRECT behavior for 16-division system!
 ```
 
 ### Step 4: AllChannels Distributes to PhaseLine (AllChannels.vhd)
 ```vhdl
--- Extract 5 bits for phase (bits 5:1)
-phase_to_phaseline <= phase(5 downto 1);  -- 5 bits: 0-31
-
--- Extract 4 bits for counter (bits 6:3)
-counter_to_phaseline <= counter(6 downto 3);  -- 4 bits: 0-15
+-- AllChannels extracts bits from phase and counter
+PhaseLine_inst : PhaseLine PORT MAP (
+    phase => phase(5 downto 1),      -- Extract bits 5:1 → 5 bits (but only 0-16 used)
+    counter => counter(6 downto 3),  -- Extract bits 6:3 → 4 bits (0-15)
+    ...
+);
 ```
 
-**Bit Extraction**:
+**Bit Extraction Explained**:
 ```
-phase input:    [7][6][5][4][3][2][1][0]
-                      └─────┬─────┘
-                    Used: bits 5:1 (5 bits)
+phase input (from Distribute):  [7][6][5][4][3][2][1][0]
+                                        └─────┬─────┘
+                                    Extracted: bits 5:1
+
+Why bits 5:1? Because phase can be 0-16 (needs 5 bits)
+  - phase = 0  → bits 5:1 = 00000 → 0
+  - phase = 15 → bits 5:1 = 01111 → 15
+  - phase = 16 → bits 5:1 = 10000 → 16 (OFF state)
 
 counter input:  [6][5][4][3][2][1][0]
-                   └───┬───┘
+                   └───┬───┘  └──┬──┘
+                   Phase(4b)  Mux(3b)
 
+counter(6:3) = 4 bits for phase comparison (0-15)
+counter(2:0) = 3 bits for mux selection (0-7)
 ```
-**ASCII Version** (for local viewing):
-```
-Master Clock (5.12 MHz):
-    ___   ___   ___   ___   ___   ___   ___   ___
-___|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |___
-   195ns  195ns  195ns  195ns  195ns  195ns  195ns
+---
 
-7-bit Counter (0-127):
-Value: 0   1   2   3   4   5   6   7   8   9  ...  127  0   1
-       ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───...───┴───┤
-       └──────────────── 25 µs (40 kHz period) ──────────┘
+## 4. Timing Diagrams
 
-4-bit Counter (bits 6:3, used for phase comparison):
-Value: 0   0   0   0   0   0   0   0   1   1   1   1   1   1   1   1   2
-       ├───────────────────────────────┴───────────────────────────────┤
-       └──────────── 1.5625 µs per division ────────────┘
-```
+### Diagram 1: Counter and 40 kHz Generation
 
-**WaveDrom Version** (renders on GitHub):
 ```wavedrom
 {
   signal: [
     {name: 'clk (5.12MHz)', wave: 'p...............', period: 0.5},
     {},
-    {name: 'counter[6:0]', wave: 'x2222222222222x', data: ['0','1','2','3','4','5','6','7','8','...','125','126','127','0'], period: 0.5},
+    {name: 'counter[6:0]', wave: '22222222........', data: ['0','1','2','3','4','5','6','7','...','127','0'], period: 0.5},
     {},
-    {name: 'counter[6:3]', wave: 'x2.......3.....4', data: ['0','1','2'], period: 4}
+    {name: 'counter[6:3]', wave: '2.......3.......', data: ['0','1'], period: 4},
+    {name: '(phase bits)', wave: 'x', period: 0.5},
+    {},
+    {name: 'counter[2:0]', wave: '22222222........', data: ['0','1','2','3','4','5','6','7','0'], period: 0.5},
+    {name: '(mux bits)', wave: 'x', period: 0.5}
   ],
   config: { hscale: 2 },
   head: {
-    text: 'Diagram 1: Counter and 40kHz Generation (25µs period, 1.5625µs per phase division)',
+    text: 'Counter Generation: 7-bit counter creates 40kHz (25µs period)',
     tick: 0
+  },
+  foot: {
+    text: 'counter[6:3] increments every 8 clocks (1.5625µs), counter[2:0] selects mux channel',
+    tock: 0
   }
 }
 ```
@@ -192,64 +223,32 @@ Value: 0   0   0   0   0   0   0   0   1   1   1   1   1   1   1   1   2
 
 
 
-**Rendered Diagram** (GitHub):
-
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-1.svg)
 
-<sub>Click the image to open in WaveDrom Editor</sub>
-
-
+---
 
 ### Diagram 2: Phase-Shifted Pulse Generation
 
-**ASCII Version** (for local viewing):
-```
-Example: 3 emitters with different phases
-
-Counter(6:3):  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
-               ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┤
-               └──────────────────── 25 µs (40 kHz) ──────────────────────┘
-
-Emitter #0 (phase=0):
-Pulse:         ████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-               └─ 10.9 µs ─┘
-
-Emitter #1 (phase=5):
-Pulse:         ░░░░░░░░░░░░░░░░░░░░░░░░████████████████░░░░░░░░░░░░░░░░░░░░
-                                       └─ 10.9 µs ─┘
-
-Emitter #2 (phase=10):
-Pulse:         ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░████████████████
-                                                           └─ 10.9 µs ─┘
-
-Physical Result:
-  - Emitter #0 starts at 0°
-  - Emitter #1 starts at 112.5° (5/16 × 360°)
-  - Emitter #2 starts at 225° (10/16 × 360°)
-  → Creates constructive/destructive interference → Focal point!
-```
-
-**WaveDrom Version** (renders on GitHub):
 ```wavedrom
 {
   signal: [
-    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
+    {name: 'counter[6:3]', wave: '2222222222222222', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
     {},
-    {name: 'Emitter #0 (phase=0)', wave: '01..............0.', period: 1, node: '.a..............b'},
-    {name: 'Emitter #1 (phase=5)', wave: '0.....1.........0.', period: 1, node: '.....c.........d'},
-    {name: 'Emitter #2 (phase=10)', wave: '0..........1....0.', period: 1, node: '..........e....f'},
+    {name: 'Emitter #0 (phase=0)', wave: '01......0.......', period: 1, node: '.a......b'},
+    {name: 'Emitter #1 (phase=5)', wave: '0.....1......0..', period: 1, node: '.....c......d'},
+    {name: 'Emitter #2 (phase=10)', wave: '0..........1....', period: 1, node: '..........e.....'},
     {},
-    ['Phase Angles',
-      {name: '0° (phase=0)', wave: 'x', phase: 0},
-      {name: '112.5° (phase=5)', wave: 'x', phase: 112.5},
-      {name: '225° (phase=10)', wave: 'x', phase: 225}
-    ]
+    {name: 'Phase Offset', wave: 'x', data: ['0°', '112.5°', '225°']}
   ],
-  edge: ['a~>b 10.9µs (7 cycles)', 'c~>d 10.9µs', 'e~>f 10.9µs'],
-  config: { hscale: 3 },
+  edge: ['a~>b 1.367µs (7 clocks)', 'c~>d 1.367µs', 'e-~>a 5 divisions'],
+  config: { hscale: 2 },
   head: {
-    text: 'Diagram 2: Phase-Shifted Pulses Create Focal Point (25µs period = 40kHz)',
+    text: 'Phase-Shifted Pulses: Different start times create interference pattern',
     tick: 0
+  },
+  foot: {
+    text: 'Pulse width = 7 clocks = 1.367µs. Phase shift creates focal point via constructive interference.',
+    tock: 0
   }
 }
 ```
@@ -260,67 +259,42 @@ Physical Result:
 
 
 
-**Rendered Diagram** (GitHub):
-
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-2.svg)
 
-<sub>Click the image to open in WaveDrom Editor</sub>
+**Key Points**:
+- Each emitter fires a 1.367 µs pulse (7 clock cycles)
+- Phase determines WHEN the pulse starts within the 25 µs period
+- Phase 0 = 0°, Phase 5 = 112.5°, Phase 10 = 225°
+- Different phases create constructive/destructive interference → focal point!
 
+---
 
+### Diagram 3: PhaseLine Pulse Generation Logic
 
-### Diagram 3: Detailed PhaseLine Operation
-
-**ASCII Version** (for local viewing):
-```
-Example: Emitter with phase = 3
-
-Master Clock (5.12 MHz):
-    ___   ___   ___   ___   ___   ___   ___   ___   ___   ___
-___|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |___
-
-Counter(6:3):  2       2       2       3       3       3       3
-               ├───────────────────────┼───────────────────────┤
-
-s_phaseCurrent: 3 (stored value)
-
-Comparison (phase = counter):
-               FALSE   FALSE   FALSE   TRUE!   FALSE   FALSE   FALSE
-
-s_counter:     0       0       0       7       6       5       4
-               ├───────────────────────┼───────┼───────┼───────┤
-
-Pulse Output:  0       0       0       1       1       1       1
-               ░░░░░░░░░░░░░░░░░░░░░░░░████████████████████████
-                                       └──── Pulse starts when counter=phase ────┘
-
-Continues for 7 clock cycles:
-Counter(6:3):  3   3   3   3   3   3   3   3   4   4   4   4
-s_counter:     7   6   5   4   3   2   1   0   0   0   0   0
-Pulse:         1   1   1   1   1   1   1   0   0   0   0   0
-               ████████████████████████████░░░░░░░░░░░░░░░░░░░░
-               └────── 7 cycles ──────┘
-```
-
-**WaveDrom Version** (renders on GitHub):
 ```wavedrom
 {
   signal: [
     {name: 'clk (5.12MHz)', wave: 'p...............', period: 0.5},
     {},
-    {name: 'counter[6:3]', wave: 'x2.......3......4', data: ['2','3','4'], period: 4},
+    {name: 'counter[6:3]', wave: '2.......3.......', data: ['2','3'], period: 4},
     {},
     {name: 's_phaseCurrent', wave: '3...............', data: ['3'], period: 0.5},
-    {name: 'match (phase=counter)', wave: '0.......10......', period: 0.5, node: '........a'},
+    {name: 'match?', wave: '0.......10......', period: 0.5, node: '........a'},
     {},
-    {name: 's_counter', wave: 'x2.......3456789', data: ['0','7','6','5','4','3','2','1','0'], period: 0.5},
+    {name: 's_counter', wave: '2.......3456789x', data: ['0','7','6','5','4','3','2','1','0'], period: 0.5},
     {},
-    {name: 'pulse output', wave: '0........1......0', period: 0.5, node: '.........b......c'}
+    {name: 'pulse', wave: '0........1......0', period: 0.5, node: '.........b......c'},
+    {name: 'enabled', wave: '1...............', period: 0.5}
   ],
-  edge: ['a-~>b Trigger', 'b~>c 7 clocks (1.367µs)'],
+  edge: ['a-~>b Load s_counter=7', 'b~>c 7 clocks = 1.367µs'],
   config: { hscale: 2 },
   head: {
-    text: 'Diagram 3: PhaseLine Pulse Generation (phase=3, 7-cycle pulse)',
+    text: 'PhaseLine Logic: When counter[6:3] matches phase, start 7-clock pulse',
     tick: 0
+  },
+  foot: {
+    text: 'pulse = (s_counter > 0) AND enabled. Pulse width = 7 × 195.3ns = 1.367µs',
+    tock: 0
   }
 }
 ```
@@ -331,69 +305,73 @@ Pulse:         1   1   1   1   1   1   1   0   0   0   0   0
 
 
 
-**Rendered Diagram** (GitHub):
-
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-3.svg)
 
-<sub>Click the image to open in WaveDrom Editor</sub>
+**PhaseLine.vhd Logic**:
+```vhdl
+-- When counter matches phase, load s_counter with 7
+if (s_phaseCurrent = to_integer(unsigned(counter))) then
+    s_counter <= 7;
+end if;
 
-
-
-### Diagram 4: Amplitude Modulation for Tactile Feedback
-
-**ASCII Version** (for local viewing):
-```
-Example: Modulation with steps = 10, targeting 100 Hz tactile sensation
-
-Master Clock (5.12 MHz):
-    ___   ___   ___   ___   ___   ___   ___   ___   ___   ___   ___
-___|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |_|   |___
-
-stepCounter:   0   1   2   3   4   5   6   7   8   9  10   0   1   2
-               ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┤
-
-chgClock:      0   0   0   0   0   0   0   0   0   0   1   0   0   0
-               ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░█░░░░░░░░░░░░
-               └────────── 1.953 µs ──────────┘
-
-s_enabled      1   1   1   1   1   1   1   1   1   1   0   0   0   0
-(for emitter): ████████████████████████████████████████░░░░░░░░░░░░░
-               └─ ON ─────────────────────────────────┘└─ OFF ─────┘
-
-Emitter Output (40 kHz with modulation):
-Time:          0 µs                    25 µs                   50 µs
-               ├───────────────────────┼───────────────────────┤
-40kHz Pulse:   ████░░░░░░░░░░░░░░░░░░░░████░░░░░░░░░░░░░░░░░░░░
-               (enabled=1)             (enabled=0, no output)
-
-Over longer time (100 Hz modulation):
-Time:          0 ms    5 ms   10 ms   15 ms   20 ms   25 ms   30 ms
-               ├───────┼───────┼───────┼───────┼───────┼───────┤
-s_enabled:     1111111000000001111111000000001111111000000001111111
-               ON─────OFF─────ON─────OFF─────ON─────OFF─────ON────
-               └────────── 100 Hz modulation (10 ms period) ──────┘
-
-User feels:    ████████░░░░░░░░████████░░░░░░░░████████░░░░░░░░████
-               Vibration at 100 Hz → Tactile sensation!
+-- Count down and generate pulse
+if (s_counter = 0) then
+    pulse <= '0';
+else
+    s_counter <= s_counter - 1;
+    pulse <= '1' and enabled;  -- Pulse only if enabled
+end if;
 ```
 
-**WaveDrom Version - Short Timescale** (renders on GitHub):
+---
+
+## 5. Amplitude Modulation
+
+### AmpModulator.vhd - Generates chgClock
+
+```vhdl
+-- AmpModulator generates a pulse every 'steps' clock cycles
+if (s_stepCounter = to_integer(unsigned(steps))) then
+    s_stepCounter <= 0;
+    chgClock <= '1';  -- Pulse for one clock cycle
+    s_amp <= s_amp + 1;  -- Increment counter (0-255)
+else
+    s_stepCounter <= s_stepCounter + 1;
+    chgClock <= '0';
+end if;
+```
+
+**Modulation Frequency**:
+```
+chgClock period = steps × 195.3125 ns
+
+steps = 10:  period = 1.953 µs  →  512 kHz
+steps = 20:  period = 3.906 µs  →  256 kHz
+steps = 31:  period = 6.055 µs  →  165 kHz
+```
+
+### Diagram 4: AmpModulator Clock Generation
+
 ```wavedrom
 {
   signal: [
     {name: 'clk (5.12MHz)', wave: 'p..........', period: 0.5},
     {},
-    {name: 'stepCounter', wave: 'x2222222222', data: ['0','1','2','3','4','5','6','7','8','9','10'], period: 0.5},
+    {name: 's_stepCounter', wave: '2222222222x', data: ['0','1','2','...','8','9','10','0'], period: 0.5},
     {},
-    {name: 'chgClock', wave: '0..........1', period: 0.5, node: '...........a'},
+    {name: 'chgClock', wave: '0..........10', period: 0.5, node: '...........a'},
     {},
-    {name: 's_enabled', wave: '1..........0', period: 0.5, node: '...........b'}
+    {name: 's_amp', wave: '2..........3.', data: ['N','N+1'], period: 0.5}
   ],
-  edge: ['a-~>b Toggle emitter'],
+  edge: ['a-~>a 10 clocks = 1.953µs (steps=10)'],
   config: { hscale: 2 },
   head: {
-    text: 'Diagram 4a: Amplitude Modulation Clock Generation (steps=10, 1.953µs period)',
+    text: 'AmpModulator: Generates chgClock pulse every "steps" clock cycles',
     tick: 0
+  },
+  foot: {
+    text: 'chgClock triggers emitter enable/disable toggling. s_amp increments 0→255.',
+    tock: 0
   }
 }
 ```
@@ -404,29 +382,115 @@ User feels:    ████████░░░░░░░░█████�
 
 
 
-**Rendered Diagram** (GitHub):
-
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-4.svg)
 
-<sub>Click the image to open in WaveDrom Editor</sub>
+---
 
+### AllChannels.vhd - Toggles Emitter Enable
 
+**CRITICAL ISSUE IDENTIFIED**: The current code toggles ONE emitter at a time, not all!
 
-**WaveDrom Version - Long Timescale** (100 Hz modulation):
+```vhdl
+-- Current implementation (PROBLEMATIC):
+AllChannels: process (chgClock) begin
+    if (rising_edge(chgClock)) then
+        -- Toggles ONLY the emitter indexed by pulse_length
+        s_enabled(to_integer(unsigned(pulse_length))) <=
+            NOT s_enabled(to_integer(unsigned(pulse_length)));
+    end if;
+end process;
+```
+
+**What this does**:
+- `pulse_length` comes from `amp` output of AmpModulator (0-255)
+- Each `chgClock` pulse toggles emitter #`pulse_length`
+- Since `amp` increments 0→1→2→...→255, emitters toggle sequentially
+- **This causes the 10ms phase shift problem!**
+
+**Expected behavior** (for synchronous modulation):
+```vhdl
+-- All emitters should toggle together:
+AllChannels: process (chgClock) begin
+    if (rising_edge(chgClock)) then
+        s_enabled <= NOT s_enabled;  -- Toggle ALL emitters
+    end if;
+end process;
+```
+
+---
+
+## 6. Complete Signal Path Example
+
+### Scenario: Two Emitters Creating Focal Point
+
+**Java Side**:
+```java
+Emitter #0: phase = 8,  amplitude = 1.0
+Emitter #1: phase = 12, amplitude = 1.0
+
+Serial TX: [254][8][12][...] → UART @ 115200 baud
+```
+
+**FPGA Processing**:
+
+1. **Distribute.vhd** - Apply calibration:
+```
+Emitter #0:
+  Input: 8
+  Calibration: PHASE_CORRECTION[0] = 11
+  Sum: 8 + 11 = 19
+  to_unsigned(19, 4): 19 mod 16 = 3
+  Mask: 3 and 0x0F = 3
+  Output: 3
+
+Emitter #1:
+  Input: 12
+  Calibration: PHASE_CORRECTION[1] = 5
+  Sum: 12 + 5 = 17
+  to_unsigned(17, 4): 17 mod 16 = 1
+  Mask: 1 and 0x0F = 1
+  Output: 1
+```
+
+2. **AllChannels.vhd** - Extract phase bits:
+```
+Emitter #0: phase(5:1) = 3(5:1) = 00011 → 00001 = 1
+Emitter #1: phase(5:1) = 1(5:1) = 00001 → 00000 = 0
+```
+
+3. **PhaseLine.vhd** - Generate pulses:
+```
+Counter[6:3]: 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
+              ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┤
+
+Emitter #0 (phase=1):
+Pulse:        ░░░░░░░░█████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+Emitter #1 (phase=0):
+Pulse:        ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+```
+
+### Diagram 5: Complete Example
+
 ```wavedrom
 {
   signal: [
-    {name: '40kHz carrier', wave: '10101010101010101010', period: 0.3},
+    {name: 'counter[6:3]', wave: '2222222222222222', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
     {},
-    {name: 's_enabled', wave: '1.......0.......1.......0.......1', period: 2, node: '.a......b.......c......d'},
+    {name: 'Emitter #0 (phase=1)', wave: '0.1......0......', period: 1, node: '..a......b'},
+    {name: 'Emitter #1 (phase=0)', wave: '01......0.......', period: 1, node: '.c......d'},
     {},
-    {name: 'Output (carrier AND enabled)', wave: '1010101.........1010101.........1', period: 0.3}
+    {name: 'Interference', wave: 'x23.....x.......', data: ['Peak','Peak'], period: 1}
   ],
-  edge: ['a~>b 5ms', 'b~>c 5ms', 'c~>d 5ms'],
-  config: { hscale: 1 },
+  edge: ['a-c 1 division offset', 'b-d Creates focal point'],
+  config: { hscale: 2 },
   head: {
-    text: 'Diagram 4b: 100Hz Tactile Modulation (10ms period, ON/OFF switching)',
+    text: 'Complete Signal Path: Phase calibration + extraction creates precise timing',
     tick: 0
+  },
+  foot: {
+    text: 'Phase offset creates constructive interference → focal point in 3D space',
+    tock: 0
   }
 }
 ```
@@ -437,113 +501,25 @@ User feels:    ████████░░░░░░░░█████�
 
 
 
-**Rendered Diagram** (GitHub):
-
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-5.svg)
-
-<sub>Click the image to open in WaveDrom Editor</sub>
-
-
-
-### Diagram 5: Complete Signal Path Example
-
-**ASCII Version** (for local viewing):
-```
-Scenario: Create focal point with 2 emitters, 100 Hz tactile modulation
-
-JAVA SIDE:
-----------
-Emitter #0: phase = 0,  amplitude = 1.0
-Emitter #1: phase = 8,  amplitude = 1.0
-
-Serial TX:  [254][0][8][...] → UART @ 115200 baud
-
-FPGA SIDE:
-----------
-UARTReader receives: [254][0][8][...]
-
-Distribute Module:
-  Emitter #0: (0 + PHASE_CORRECTION[0]) and 0x1F = (0 + 11) and 31 = 11
-  Emitter #1: (8 + PHASE_CORRECTION[1]) and 0x1F = (8 + 5) and 31 = 13
-
-AllChannels Module:
-  phase_to_PhaseLine[0] = 11(5:1) = 5  (bits 5:1 of 11 = 01011 → 00101 = 5)
-  phase_to_PhaseLine[1] = 13(5:1) = 6  (bits 5:1 of 13 = 01101 → 00110 = 6)
-
-PhaseLine Instances:
-  Counter(6:3): 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
-                ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┤
-
-  Emitter #0 (phase=5):
-  Pulse:        ░░░░░░░░░░░░░░░░░░░░░░░░████████████████░░░░░░░░░░░░░░░░░░░░
-
-  Emitter #1 (phase=6):
-  Pulse:        ░░░░░░░░░░░░░░░░░░░░░░░░░░░░████████████████░░░░░░░░░░░░░░░░
-
-Amplitude Modulation (100 Hz):
-  chgClock pulses every 5 ms
-  s_enabled toggles: 1 → 0 → 1 → 0 → 1 → 0 ...
-
-Final Output (at emitter):
-  - 40 kHz ultrasound with phase shift
-  - Modulated at 100 Hz for tactile sensation
-  - Constructive interference creates focal point in air
-  - User feels 100 Hz vibration at focal point location!
-```
-
-**WaveDrom Version** (renders on GitHub):
-```wavedrom
-{
-  signal: [
-    {name: 'counter[6:3]', wave: 'x2222222222222222x', data: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'], period: 1},
-    {},
-    ['Two Emitters with Phase Shift',
-      {name: 'Emitter #0 (phase=5)', wave: '0.....1.........0.', period: 1, node: '.....a.........b'},
-      {name: 'Emitter #1 (phase=6)', wave: '0......1........0.', period: 1, node: '......c........d'}
-    ],
-    {},
-    ['Result: Constructive Interference',
-      {name: 'Combined Acoustic Pressure', wave: 'x.....23........x.', data: ['Peak','Peak'], period: 1}
-    ]
-  ],
-  edge: ['a-c 1 phase div (1.56µs)', 'b-d Phase offset creates focal point'],
-  config: { hscale: 3 },
-  head: {
-    text: 'Diagram 5: Complete Signal Path - Two Emitters Create Focal Point',
-    tick: 0
-  }
-}
-```
-
-**Rendered Diagram** (GitHub):
-
-![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-6.svg)
-
-
-
-**Rendered Diagram** (GitHub):
-
-![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-6.svg)
-
-<sub>Click the image to open in WaveDrom Editor</sub>
 
 
 
 ---
 
-## Summary of Key Frequencies
+## 7. Summary
+
+### Key Frequencies and Timing
 
 | Signal | Frequency | Period | Purpose |
 |--------|-----------|--------|---------|
-| Master Clock | 5.12 MHz | 195.3 ns | FPGA synchronous logic |
+| Master Clock | 5.12 MHz | 195.3125 ns | FPGA synchronous logic |
 | Counter Full Cycle | 40 kHz | 25 µs | Ultrasonic carrier frequency |
-| Phase Division | 2.56 MHz | 390.6 ns | Phase resolution (16 divs) |
-| Pulse Width | - | 10.9 µs | Emitter ON time per cycle |
-| Modulation (typical) | 50-200 Hz | 5-20 ms | Tactile feedback sensation |
+| Phase Division | - | 1.5625 µs | Phase resolution (16 divisions) |
+| Pulse Width | - | 1.367 µs | Emitter ON time (7 clocks, 5.47% duty cycle) |
+| chgClock (steps=10) | 512 kHz | 1.953 µs | Modulation trigger |
 
----
-
-## Phase Calibration Impact
+### Phase Calibration Impact
 
 The PHASE_CORRECTION array compensates for physical variations in each transducer:
 
@@ -553,8 +529,9 @@ Without Calibration:
   → Focal point is distorted or shifted
 
 With Calibration:
-  Java sends phase=8 → FPGA adds correction (+11) → phase=19
-  → Emitter fires at correct time → Perfect focal point!
+  Java sends phase=8 → FPGA adds correction (+11) → sum=19
+  → to_unsigned(19, 4) wraps to 3 → Emitter fires at correct time
+  → Perfect focal point!
 ```
 
 **Why divide by 2?**
@@ -562,115 +539,30 @@ With Calibration:
 - Current system uses 16 divisions (0-15)
 - Calibration values must be scaled: `new_cal = old_cal / 2`
 
+### Critical Findings
+
+1. **Phase Correction Uses 4-bit Conversion**:
+   - `to_unsigned(..., 4)` automatically wraps at 16
+   - This is correct for 16-division system
+   - The `and "00001111"` mask is redundant but harmless
+
+2. **Modulation Synchronization Issue**:
+   - Current code toggles ONE emitter per chgClock pulse
+   - Emitters toggle sequentially, not synchronously
+   - This causes ~10ms phase shifts between emitters
+   - **Fix**: Toggle all emitters together with `s_enabled <= NOT s_enabled`
+
+3. **Pulse Width is Fixed**:
+   - Always 7 clock cycles = 1.367 µs
+   - Duty cycle = 1.367 µs / 25 µs = 5.47%
+   - This is correct for the current design
+
 ---
 
 ## Document Version
 - **Created**: 2026-01-16
+- **Last Updated**: 2026-01-19
 - **System**: FPGA Tactile Modulation Firmware
-- **Branch**: fix-phase-calibration-16divs
-
-## 4. Temporal Signal Generation
-
-### PhaseLine Module (PhaseLine.vhd)
-Each of the 256 emitters has its own PhaseLine instance that generates the pulse timing.
-
-```vhdl
--- Inputs
-phase : 5 bits (0-31)    -- When to start pulse
-counter : 4 bits (0-15)  -- Current time division
-enabled : 1 bit          -- Amplitude modulation enable
-
--- Internal signals
-s_phaseCurrent : 0 to 16  -- Active phase value
-s_counter : 0 to 7        -- Pulse width counter
-
--- Logic
-if (s_phaseCurrent = counter) then
-    s_counter <= 7;  -- Start 7-cycle pulse
-end if
-
-if (s_counter = 0) then
-    pulse <= '0';
-else
-    s_counter <= s_counter - 1;
-    pulse <= '1' and enabled;  -- Output pulse if enabled
-end if
-```
-
-**Pulse Generation Timeline**:
-```
-Counter:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15  0  1  2...
-          ├──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┤
-          └─────────────── 25 µs (40 kHz period) ──────────┘
-
-If phase = 5:
-Counter:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15
-Pulse:    0  0  0  0  0  1  1  1  1  1  1  1  1  0  0  0
-                        └────── 7 cycles ──────┘
-```
-
-**Pulse Width**: 7 × (25 µs / 16) = 7 × 1.5625 µs = **10.9375 µs**
-
----
-
-## 5. Amplitude Modulation
-
-### AmpModulator Module (AmpModulator.vhd)
-Generates the modulation clock (`chgClock`) for tactile feedback.
-
-```vhdl
--- Inputs
-clk : 5.12 MHz
-steps : 5 bits (0-31)  -- Modulation speed control
-
--- Outputs
-chgClock : pulse signal  -- Triggers amplitude changes
-amp : 8 bits (0-255)     -- Amplitude counter (currently unused)
-
--- Logic
-if (stepCounter = steps) then
-    stepCounter <= 0;
-    chgClock <= '1';  -- Pulse for one clock cycle
-    amp <= amp + 1;   -- Increment amplitude counter
-else
-    stepCounter <= stepCounter + 1;
-    chgClock <= '0';
-end if
-```
-
-**Modulation Frequency Calculation**:
-```
-steps = 10:
-  chgClock period = 10 × 195.3 ns = 1.953 µs
-  chgClock frequency = 1 / 1.953 µs = 512 kHz
-
-steps = 20:
-  chgClock period = 20 × 195.3 ns = 3.906 µs
-  chgClock frequency = 1 / 3.906 µs = 256 kHz
-```
-
-### Emitter Enable/Disable (AllChannels.vhd)
-```vhdl
--- Each emitter has an enabled signal
-signal s_enabled : STD_LOGIC_VECTOR(255 downto 0) := (others => '1');
-
--- On each chgClock pulse, toggle one emitter
-AllChannels: process (chgClock) begin
-    if (rising_edge(chgClock)) then
-        s_enabled(to_integer(unsigned(pulse_length))) <=
-            NOT s_enabled(to_integer(unsigned(pulse_length)));
-    end if;
-end process;
-```
-
-**Modulation Effect**:
-- Individual emitter toggles ON/OFF at chgClock rate
-- Creates amplitude modulation for tactile sensation
-- Typical tactile frequency: 50-200 Hz
-
----
-
-## 6. Timing Diagrams
-
-### Diagram 1: Counter and 40 kHz Generation
+- **Branch**: phase_fix_16bit
+- **Status**: ✅ Reviewed and corrected with actual VHDL code
 
