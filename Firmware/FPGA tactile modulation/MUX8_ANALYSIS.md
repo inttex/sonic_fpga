@@ -99,6 +99,12 @@ Output:       █    ░    ░    ░    ░    ░    ░    ░    █    █
 
 ![WaveDrom Diagram](./wavedrom-images/MUX8_ANALYSIS-diagram-1.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/MUX8_ANALYSIS-diagram-1.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -170,6 +176,12 @@ Here's why:
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/MUX8_ANALYSIS-diagram-2.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 

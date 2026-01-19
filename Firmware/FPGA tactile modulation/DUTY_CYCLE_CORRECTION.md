@@ -81,6 +81,12 @@ Pulse:         1     1     1     1     1     1     1     0     0     0
 
 ![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_CORRECTION-diagram-1.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_CORRECTION-diagram-1.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -374,6 +380,12 @@ Total = 128 clock cycles ✓
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_CORRECTION-diagram-2.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
