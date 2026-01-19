@@ -190,6 +190,12 @@ Value: 0   0   0   0   0   0   0   0   1   1   1   1   1   1   1   1   2
 
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-1.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-1.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -247,6 +253,12 @@ Physical Result:
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-2.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -312,6 +324,12 @@ Pulse:         1   1   1   1   1   1   1   0   0   0   0   0
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-3.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -384,6 +402,12 @@ User feels:    ████████░░░░░░░░█████�
 
 ![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-4.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-4.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -406,6 +430,12 @@ User feels:    ████████░░░░░░░░█████�
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-5.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -484,6 +514,12 @@ Final Output (at emitter):
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/PHASE_SIGNAL_PATH_DOCUMENTATION-diagram-6.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 

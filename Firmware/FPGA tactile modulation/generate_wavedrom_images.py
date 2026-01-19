@@ -58,44 +58,53 @@ def extract_wavedrom_blocks(content):
 
 def fix_wavedrom_json(wavedrom_text):
     """Convert JavaScript-style object notation to strict JSON"""
-    # Add quotes around unquoted property names
-    # This is a simple regex-based approach
     import re
 
+    # Step 1: Add quotes around unquoted property names
     # Pattern to match unquoted keys like: name: 'value' or name: value
     # Replace with: "name": 'value' or "name": value
     pattern = r'(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:'
     fixed = re.sub(pattern, r'\1"\2":', wavedrom_text)
 
-    # Replace single quotes with double quotes for string values
-    # But be careful not to replace single quotes inside double-quoted strings
+    # Step 2: Replace single quotes with double quotes for string values
     fixed = fixed.replace("'", '"')
+
+    # Step 3: Fix array labels - WaveDrom allows ['Label', {...}] syntax
+    # This is valid in WaveDrom but we need to ensure proper JSON formatting
+    # The wavedrom library should handle this, so we just ensure proper quoting
+
+    # Step 4: Handle special characters in strings (like degree symbol °)
+    # These should be fine in JSON strings
+
+    # Step 5: Fix trailing commas before closing brackets/braces (common JS error)
+    fixed = re.sub(r',(\s*[}\]])', r'\1', fixed)
 
     return fixed
 
 def generate_svg_from_wavedrom(wavedrom_json, output_path):
     """Generate SVG using wavedrom Python package"""
     try:
-        # Fix JavaScript-style JSON to strict JSON
-        fixed_json = fix_wavedrom_json(wavedrom_json)
+        # The wavedrom.render() function expects a STRING, not a dict
+        # It will do its own parsing using YAML/JSON
+        # We just need to pass the raw WaveDrom text
 
-        # Parse the WaveDrom JSON
-        wave_data = json.loads(fixed_json)
+        # Render to SVG - pass the string directly
+        svg_content = wavedrom.render(wavedrom_json)
 
-        # Render to SVG
-        svg = wavedrom.render(wave_data)
-
-        # Save to file
-        svg.saveas(str(output_path))
+        # Check if it's a string or object
+        if hasattr(svg_content, 'tostring'):
+            # It's an SVG object
+            svg_content.saveas(str(output_path))
+        else:
+            # It's a string, write directly
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(svg_content)
 
         return True
-    except json.JSONDecodeError as e:
-        print(f"   ❌ JSON Error: {e}")
-        # Print the problematic JSON for debugging
-        print(f"      First 200 chars: {wavedrom_json[:200]}")
-        return False
     except Exception as e:
         print(f"   ❌ Error generating SVG: {e}")
+        # Print the problematic JSON for debugging
+        print(f"      First 200 chars: {wavedrom_json[:200]}")
         return False
 
 def process_markdown_file(filename, image_dir):
