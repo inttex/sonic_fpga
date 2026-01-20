@@ -122,6 +122,12 @@ Duty cycle: 12.5 µs / 25 µs = 50% ✓✓✓
 
 ![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_FIX_IMPLEMENTATION-diagram-1.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_FIX_IMPLEMENTATION-diagram-1.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -182,6 +188,12 @@ Pulse:         0    0    0    0    0    0    1    1    1    1    1    1    1    
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/DUTY_CYCLE_FIX_IMPLEMENTATION-diagram-2.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 

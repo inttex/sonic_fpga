@@ -46,6 +46,12 @@ Shows how the 7-bit counter creates the 40 kHz carrier frequency with 16 phase d
 
 ![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-1.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-1.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -84,6 +90,12 @@ Demonstrates how different phase values create time-shifted pulses for multiple 
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-2.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -143,6 +155,12 @@ Shows the internal operation of the PhaseLine module with phase comparison and p
 
 ![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-3.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-3.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -188,6 +206,12 @@ Shows the internal operation of the PhaseLine module with phase comparison and p
 
 ![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-4.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-4.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -211,6 +235,12 @@ Shows the internal operation of the PhaseLine module with phase comparison and p
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-5.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -270,6 +300,12 @@ Shows two emitters with different phases creating a focal point.
 
 ![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-6.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-6.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -307,6 +343,12 @@ Shows the original 5.47% duty cycle issue.
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-7.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -368,6 +410,12 @@ Demonstrates the 50% duty cycle fix.
 
 ![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-8.svg)
 
+
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-8.svg)
+
 <sub>Click the image to open in WaveDrom Editor</sub>
 
 
@@ -393,6 +441,12 @@ Demonstrates the 50% duty cycle fix.
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-9.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
@@ -433,6 +487,12 @@ Demonstrates the 50% duty cycle fix.
   }
 }
 ```
+
+**Rendered Diagram** (GitHub):
+
+![WaveDrom Diagram](./wavedrom-images/WAVEDROM_DIAGRAMS_SUMMARY-diagram-10.svg)
+
+
 
 **Rendered Diagram** (GitHub):
 
