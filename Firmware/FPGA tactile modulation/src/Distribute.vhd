@@ -56,10 +56,10 @@ begin
 						s_set_out <= '1';
 						s_ByteCounter <= s_ByteCounter + 1;
 						
-						if (q_in = "00100000") then
-							s_data_out <= q_in; -- a phase of 32 represents "off" so no phase correction
+						if (q_in = "00010000") then
+							s_data_out <= q_in; -- a phase of 16 represents "off" so no phase correction
 						else
-							s_data_out <= std_logic_vector( to_unsigned( to_integer(unsigned(q_in)) + PHASE_CORRECTION(s_ByteCounter), 8 ) ) and "00011111";
+							s_data_out <= std_logic_vector( to_unsigned( to_integer(unsigned(q_in)) + PHASE_CORRECTION(s_ByteCounter), 4 ) ) and "00001111";
 						end if;
 						
 					end if;
