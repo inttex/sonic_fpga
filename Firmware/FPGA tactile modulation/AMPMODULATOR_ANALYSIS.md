@@ -1,12 +1,14 @@
-# AmpModulator Analysis - Amplitude Modulation System
+# AmpModulator Analysis - Sequential Emitter Toggle System
 
 ## 🎯 Executive Summary
 
-**AmpModulator** ist ein Modul zur **Amplitudenmodulation** der Emitter-Signale.
+**AmpModulator** ist ein Modul zur **sequenziellen Steuerung** der Emitter.
 
-**Funktion**: Generiert einen langsam ansteigenden Amplitudenwert (0-255) mit konfigurierbarer Geschwindigkeit.
+**Funktion**: Generiert einen langsam ansteigenden Zählerwert (0-255) mit konfigurierbarer Geschwindigkeit.
 
-**Zweck**: Ermöglicht sanfte Amplitudenänderungen (Fade-In/Fade-Out) für die Emitter.
+**Zweck**: Schaltet Emitter sequenziell ein/aus für **taktile Modulation** (z.B. Vibrations-Effekte).
+
+**WICHTIG**: Dies ist KEINE Amplitudenmodulation im klassischen Sinne, sondern ein **sequenzieller Toggle-Mechanismus**!
 
 ---
 
@@ -40,14 +42,16 @@ end AmpModulator;
 ### Outputs:
 
 1. **amp** (8 bits, 0-255)
-   - Aktueller Amplitudenwert
+   - Aktueller Zählerwert (Emitter-Index)
    - Zählt von 0 bis 255, dann wieder von 0
-   - **Verwendung**: Wird NICHT in QuadrupleBuffer verwendet! (Ungenutzt)
+   - **Verbindung in QuadrupleBuffer.bdf**: `AllChannels.pulse_length[7..0]`
+   - **Verwendung**: Bestimmt, welcher Emitter getoggled wird!
 
 2. **chgClock** (1 bit)
-   - Puls-Signal, das bei jeder Amplitudenänderung HIGH wird
+   - Puls-Signal, das bei jeder Zähler-Änderung HIGH wird
    - **Verbindung in QuadrupleBuffer.bdf**: `AllChannels.chgClock`
    - Dauer: 1 Clock-Zyklus HIGH, dann LOW bis zur nächsten Änderung
+   - **Verwendung**: Triggert das Toggle des Emitters!
 
 ---
 
@@ -128,11 +132,13 @@ end process;
   - Intermediate: (pt 112 256) → (pt 72 128) → (pt 72 64)
 
 **Outputs**:
-- **amp[7..0]** → **UNGENUTZT!**
-  - Kein Connector gefunden in QuadrupleBuffer.bdf
+- **amp[7..0]** → `AllChannels.pulse_length[7..0]`
+  - Connector: (pt 272 48) → (pt 288 48) → (pt 288 208) → (pt 400 208)
+  - **VERWENDET!** Bestimmt, welcher Emitter getoggled wird
 
 - **chgClock** → `AllChannels.chgClock`
   - Connector: (pt 272 64) → (pt 304 64) → (pt 304 176) → (pt 400 176)
+  - **VERWENDET!** Triggert das Toggle-Event
 
 ---
 
@@ -224,47 +230,68 @@ elsif (q_in(7 downto 5) = "101") then -- "101XXXXX" is step set
 
 ---
 
-## Verwendung von chgClock in AllChannels
+## ⚡ Verwendung in AllChannels.vhd - DAS IST DER SCHLÜSSEL!
 
-**AllChannels.vhd** empfängt `chgClock` als Input:
+**AllChannels.vhd** empfängt BEIDE Outputs von AmpModulator:
 
 ```vhdl
 chgClock : in  STD_LOGIC;
+pulse_length : in STD_LOGIC_VECTOR (7 downto 0);
 ```
 
-**ABER**: In der aktuellen Implementierung wird `chgClock` **NICHT verwendet**!
+### Der Toggle-Mechanismus (Zeile 95-99):
 
-### Mögliche zukünftige Verwendung:
+```vhdl
+AllChannels: process (chgClock) begin
+    if (rising_edge(chgClock)) then
+        s_enabled( to_integer(unsigned(pulse_length)) ) <= NOT s_enabled( to_integer(unsigned(pulse_length)) );
+    end if
+end process;
+```
 
-`chgClock` könnte verwendet werden, um:
-1. **Amplitudenmodulation** der Pulse zu synchronisieren
-2. **Fade-In/Fade-Out** Effekte zu steuern
-3. **Zeitgesteuerte Änderungen** der Emitter-Parameter
+### Was passiert hier?
 
-**Aktueller Status**: Ungenutzt (potenzielle zukünftige Erweiterung)
+1. **Bei jedem chgClock-Puls** (alle (steps+1) Zyklen bei 640 kHz)
+2. **Wird der Emitter** mit Index **pulse_length** (= amp Wert 0-255)
+3. **Ein- oder ausgeschaltet** (toggle: `NOT s_enabled(i)`)
+
+### Beispiel-Ablauf (steps = 10):
+
+| Zeit | amp | chgClock | Aktion |
+|------|-----|----------|--------|
+| 0 µs | 0 | 0→1 | Emitter 0: ON → OFF (oder OFF → ON) |
+| 17.2 µs | 1 | 0→1 | Emitter 1: Toggle |
+| 34.4 µs | 2 | 0→1 | Emitter 2: Toggle |
+| ... | ... | ... | ... |
+| 4.4 ms | 255 | 0→1 | Emitter 255: Toggle |
+| 4.4 ms | 0 | 0→1 | Emitter 0: Toggle (wieder) |
+
+**Ergebnis**: Ein **sequenzieller Scan** durch alle 256 Emitter, wobei jeder Emitter bei jedem Durchlauf getoggled wird!
 
 ---
 
-## ⚠️ WICHTIGE ENTDECKUNG: amp Output ist ungenutzt!
+## ⚡ WICHTIGE ENTDECKUNG: Taktile Modulation durch sequenzielles Toggle!
 
-**AmpModulator.amp** wird in QuadrupleBuffer.bdf **NICHT verbunden**!
+**AmpModulator.amp** wird zu **AllChannels.pulse_length** verbunden!
 
 ### Was bedeutet das?
 
 1. **AmpModulator zählt intern** von 0 bis 255
-2. **amp Output** wird generiert, aber nirgendwo verwendet
-3. **Nur chgClock** wird verwendet (als Timing-Signal)
+2. **amp Output** wird als **Emitter-Index** verwendet
+3. **chgClock** triggert das **Toggle-Event**
+4. **Ergebnis**: Sequenzielles Ein-/Ausschalten aller 256 Emitter
 
-### Warum?
+### Warum "AmpModulator"?
 
-**Vermutung**: AmpModulator wurde ursprünglich für Amplitudenmodulation entwickelt, aber:
-- Die tatsächliche Amplitudensteuerung erfolgt möglicherweise anders
-- Oder: Die Funktion ist noch nicht implementiert
-- Oder: `chgClock` wird für andere Zwecke verwendet (z.B. Synchronisation)
+Der Name ist **irreführend**! Es ist KEINE Amplitudenmodulation, sondern:
+- **Sequenzieller Scan** durch alle Emitter
+- **Toggle-Mechanismus** für taktile Effekte
+- **Programmierbare Geschwindigkeit** (via steps)
 
-**Aktuell**: AmpModulator dient hauptsächlich als **programmierbarer Taktteiler**:
-- Input: 640 kHz (COUNT[2])
-- Output: chgClock mit Frequenz = 640 kHz / (steps + 1)
+**Tatsächliche Funktion**:
+- Erzeugt eine **Vibrations-Welle** durch die Emitter-Array
+- Geschwindigkeit steuerbar via UART (steps = 0-31)
+- Frequenz des Scans: 78 Hz bis 2.5 kHz (für kompletten Durchlauf)
 
 ---
 
@@ -302,9 +329,24 @@ AmpModulator.steps[4..0]
 └─────────────────────────────────────┘
     ↓                    ↓
     amp[7..0]        chgClock
-    (UNGENUTZT!)         ↓
-                    AllChannels.chgClock
-                    (UNGENUTZT!)
+    ↓                    ↓
+AllChannels.pulse_length[7..0]  AllChannels.chgClock
+    ↓                    ↓
+    └────────┬───────────┘
+             ↓
+    ┌───────────────────────────────┐
+    │ AllChannels Process:          │
+    │                               │
+    │ if rising_edge(chgClock) then │
+    │   s_enabled(pulse_length)     │
+    │     <= NOT s_enabled(...)     │
+    │ end if                        │
+    │                               │
+    │ TOGGLE Emitter #pulse_length! │
+    └───────────────────────────────┘
+             ↓
+    Emitter 0, 1, 2, ..., 255
+    (sequenziell getoggled)
 ```
 
 ---
@@ -315,31 +357,63 @@ AmpModulator.steps[4..0]
 
 1. **Zählt** von 0 bis 255 mit konfigurierbarer Geschwindigkeit
 2. **Generiert** einen Puls (`chgClock`) bei jeder Zähler-Änderung
-3. **Teilt** die 640 kHz Clock durch (steps + 1)
+3. **Steuert** sequenziell alle 256 Emitter (Toggle-Mechanismus)
+4. **Erzeugt** taktile Vibrations-Effekte durch die Emitter-Array
 
 ### Was AmpModulator NICHT tut:
 
-1. **Moduliert NICHT** die Amplitude der Emitter-Pulse (amp ist ungenutzt)
-2. **Beeinflusst NICHT** direkt die Emitter-Ausgänge
-3. **Wird NICHT** für die Haupt-Puls-Generierung verwendet
+1. **Moduliert NICHT** die Amplitude der Emitter-Pulse (trotz des Namens!)
+2. **Ändert NICHT** die Puls-Stärke oder -Länge
+3. **Beeinflusst NICHT** die Phase der Emitter
 
 ### Aktueller Zweck:
 
-**Programmierbarer Taktteiler** mit UART-Steuerung:
-- Erzeugt ein Timing-Signal (chgClock) mit variabler Frequenz
-- Frequenz-Bereich: 20 kHz bis 640 kHz
-- Steuerbar über UART-Befehle
+**Sequenzieller Emitter-Toggle** mit UART-Steuerung:
+- Schaltet Emitter sequenziell ein/aus (0→1→2→...→255→0)
+- Toggle-Frequenz: 20 kHz bis 640 kHz (pro Emitter)
+- Scan-Frequenz: 78 Hz bis 2.5 kHz (kompletter Durchlauf)
+- Erzeugt **taktile Vibrations-Wellen** durch die Array
 
-### Potenzielle zukünftige Verwendung:
+### Anwendungen:
 
-- **Amplitudenmodulation** der Emitter (wenn amp Output verbunden wird)
-- **Fade-Effekte** (sanfte Übergänge)
-- **Zeitgesteuerte Änderungen** (synchronisiert mit chgClock)
+- **Taktile Feedback-Effekte** (Vibration, Textur)
+- **Bewegungs-Simulation** (Wellen, Strömungen)
+- **Aufmerksamkeits-Signale** (pulsierende Bereiche)
+- **Dynamische Intensitäts-Modulation** (durch Toggle-Frequenz)
 
 ---
 
 **Erstellt**: 2026-01-20
+**Aktualisiert**: 2026-01-20 (Korrektur nach Hinweis des Benutzers!)
 **Zweck**: Vollständige Analyse von AmpModulator und seinen Verbindungen
-**Status**: ✅ Dokumentiert - amp und chgClock sind aktuell ungenutzt!
+**Status**: ✅ Dokumentiert - amp und chgClock werden für sequenzielles Emitter-Toggle verwendet!
+
+---
+
+## 🙏 Danke für die Korrektur!
+
+**Ursprünglicher Fehler**: Ich hatte behauptet, dass `amp` ungenutzt sei.
+
+**Tatsache**: `amp` ist verbunden zu `AllChannels.pulse_length[7..0]` und wird aktiv verwendet!
+
+**Verbindung in QuadrupleBuffer.bdf**:
+```
+AmpModulator.amp[7..0] (pt 272 48)
+  → (pt 288 48)
+  → (pt 288 208)
+  → (pt 400 208)
+  → AllChannels.pulse_length[7..0]
+```
+
+**Verwendung in AllChannels.vhd (Zeile 95-99)**:
+```vhdl
+AllChannels: process (chgClock) begin
+    if (rising_edge(chgClock)) then
+        s_enabled( to_integer(unsigned(pulse_length)) ) <= NOT s_enabled( to_integer(unsigned(pulse_length)) );
+    end if
+end process;
+```
+
+**Funktion**: Sequenzielles Toggle der Emitter für taktile Modulation!
 
 
