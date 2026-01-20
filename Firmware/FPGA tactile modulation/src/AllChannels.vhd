@@ -92,9 +92,12 @@ muxes : for i in 0 to (NBLOCKS/8-1) generate
 
 end generate muxes;
 
-AllChannels: process (chgClock) begin 
+AllChannels: process (chgClock) begin
         if (rising_edge(chgClock)) then
-				s_enabled( to_integer(unsigned(pulse_length)) ) <= NOT s_enabled( to_integer(unsigned(pulse_length)) );
+			if (pulse_length = "00000000") then
+				-- Toggle ALL emitters synchronously when pulse_length = 0
+				s_enabled <= NOT s_enabled;
+			end if;
 		  end if;
  end process;
  
