@@ -1,0 +1,128 @@
+# -------------------------------------------------------------------------- #
+# Quartus Settings File — DualBuffer
+# SonicSurface k-Blend Redesign
+# Target: EP4CE6E22C8  (Cyclone IV E, EQFP-144, 91 user I/O)
+# -------------------------------------------------------------------------- #
+
+set_global_assignment -name FAMILY "Cyclone IV E"
+set_global_assignment -name DEVICE EP4CE6E22C8
+set_global_assignment -name TOP_LEVEL_ENTITY TopLevel
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+
+# I/O standard (2.5 V LVCMOS for all user pins)
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
+
+# Allow nCEO pin to be used as I/O after configuration
+set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
+
+# -------------------------------------------------------------------------- #
+# Source files
+# -------------------------------------------------------------------------- #
+set_global_assignment -name QIP_FILE src/Masterclock.qip
+set_global_assignment -name VHDL_FILE src/DualBuffer_pkg.vhd
+set_global_assignment -name VHDL_FILE src/UARTReader.vhd
+set_global_assignment -name VHDL_FILE src/UARTSender.vhd
+set_global_assignment -name VHDL_FILE src/Counter.vhd
+set_global_assignment -name VHDL_FILE src/PhaseLine.vhd
+set_global_assignment -name VHDL_FILE src/Mux8.vhd
+set_global_assignment -name VHDL_FILE src/PatternMem.vhd
+set_global_assignment -name VHDL_FILE src/KBlend.vhd
+set_global_assignment -name VHDL_FILE src/SpiAdc.vhd
+set_global_assignment -name VHDL_FILE src/KSource.vhd
+set_global_assignment -name VHDL_FILE src/CommandDecoder.vhd
+set_global_assignment -name VHDL_FILE src/TopLevel.vhd
+
+# -------------------------------------------------------------------------- #
+# Pin assignments — Clock
+# -------------------------------------------------------------------------- #
+set_location_assignment PIN_23 -to CLK
+
+# -------------------------------------------------------------------------- #
+# Pin assignments — 74HC595 output chains
+#   Chain 1: emitters 0-127  (DATA[0..15], SHIFT_CLOCK_1, LATCH_CLOCK_1)
+#   Chain 2: emitters 128-255 (DATA[16..31], SHIFT_CLOCK_2, LATCH_CLOCK_2)
+# -------------------------------------------------------------------------- #
+set_location_assignment PIN_28 -to SHIFT_CLOCK_1
+set_location_assignment PIN_30 -to LATCH_CLOCK_1
+set_location_assignment PIN_85 -to SHIFT_CLOCK_2
+set_location_assignment PIN_84 -to LATCH_CLOCK_2
+
+set_location_assignment PIN_59  -to DATA[0]
+set_location_assignment PIN_64  -to DATA[1]
+set_location_assignment PIN_66  -to DATA[2]
+set_location_assignment PIN_68  -to DATA[3]
+set_location_assignment PIN_112 -to DATA[4]
+set_location_assignment PIN_114 -to DATA[5]
+set_location_assignment PIN_119 -to DATA[6]
+set_location_assignment PIN_121 -to DATA[7]
+set_location_assignment PIN_73  -to DATA[8]
+set_location_assignment PIN_71  -to DATA[9]
+set_location_assignment PIN_69  -to DATA[10]
+set_location_assignment PIN_42  -to DATA[11]
+set_location_assignment PIN_141 -to DATA[12]
+set_location_assignment PIN_113 -to DATA[13]
+set_location_assignment PIN_111 -to DATA[14]
+set_location_assignment PIN_106 -to DATA[15]
+set_location_assignment PIN_54  -to DATA[16]
+set_location_assignment PIN_58  -to DATA[17]
+set_location_assignment PIN_52  -to DATA[18]
+set_location_assignment PIN_55  -to DATA[19]
+set_location_assignment PIN_126 -to DATA[20]
+set_location_assignment PIN_127 -to DATA[21]
+set_location_assignment PIN_129 -to DATA[22]
+set_location_assignment PIN_133 -to DATA[23]
+set_location_assignment PIN_53  -to DATA[24]
+set_location_assignment PIN_51  -to DATA[25]
+set_location_assignment PIN_49  -to DATA[26]
+set_location_assignment PIN_44  -to DATA[27]
+set_location_assignment PIN_137 -to DATA[28]
+set_location_assignment PIN_135 -to DATA[29]
+set_location_assignment PIN_132 -to DATA[30]
+set_location_assignment PIN_128 -to DATA[31]
+
+# -------------------------------------------------------------------------- #
+# Pin assignments — Status LEDs (active high)
+# -------------------------------------------------------------------------- #
+set_location_assignment PIN_3  -to LED[0]
+set_location_assignment PIN_7  -to LED[1]
+set_location_assignment PIN_10 -to LED[2]
+set_location_assignment PIN_11 -to LED[3]
+
+# -------------------------------------------------------------------------- #
+# Pin assignments — EPCS serial flash (config, reserved)
+# -------------------------------------------------------------------------- #
+set_location_assignment PIN_6  -to EPCS_SDO
+set_location_assignment PIN_8  -to EPCS_SCE
+set_location_assignment PIN_12 -to EPCS_CLK
+set_location_assignment PIN_13 -to EPCS_DATA0
+
+# -------------------------------------------------------------------------- #
+# Pin assignments — Lateral connector (MISC_A..F) — all 6 accessible pins
+# -------------------------------------------------------------------------- #
+# MISC_A: UART_RX  — CP2102 TX → FPGA
+set_location_assignment PIN_65  -to UART_RX
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to UART_RX
+
+# MISC_B: UART_TX  — FPGA → CP2102 RX
+set_location_assignment PIN_60  -to UART_TX
+
+# MISC_C: MCP3208 ADC chip select (active low)
+set_location_assignment PIN_67  -to MCP_CS
+
+# MISC_D: MCP3208 SPI clock
+set_location_assignment PIN_120 -to MCP_SCK
+
+# MISC_E: MCP3208 SPI data (MISO)
+set_location_assignment PIN_115 -to MCP_MISO
+
+# MISC_F: TRIGGER — 40 kHz carrier sync pulse (one clock pulse per carrier cycle)
+set_location_assignment PIN_124 -to TRIGGER
+
+# -------------------------------------------------------------------------- #
+# Pin assignment — TRIGGER_K
+# PIN_34 (Bank 3) — assigned in FPGA but NOT connected on PCB by default.
+# Solder a wire to the CoreEP4CE6 2x22 header to access when needed.
+# -------------------------------------------------------------------------- #
+set_location_assignment PIN_34 -to TRIGGER_K

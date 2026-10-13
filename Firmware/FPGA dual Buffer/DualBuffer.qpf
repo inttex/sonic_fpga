@@ -1,0 +1,11 @@
+# -------------------------------------------------------------------------- #
+# Quartus Prime Project File
+# SonicSurface — FPGA Dual Buffer (k-Blend Redesign)
+# Target: Altera Cyclone IV EP4CE6E22C8
+# -------------------------------------------------------------------------- #
+
+QUARTUS_VERSION = "13.0"
+DATE = "2026-10-13"
+
+# Revisions
+PROJECT_REVISION = "DualBuffer"
